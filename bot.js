@@ -1,53 +1,56 @@
-const http = require('http')
+const http = require('http');
+const mineflayer = require('mineflayer');
 
+const PORT = process.env.PORT || 3000;
+
+// Render health check
 http.createServer((req, res) => {
-  res.writeHead(200)
-  res.end('Bot is running')
-}).listen(process.env.PORT || 3000)
-
-
-const mineflayer = require('mineflayer')
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Minecraft AFK Bot is running!');
+}).listen(PORT, () => {
+  console.log(`HTTP server listening on port ${PORT}`);
+});
 
 const config = {
   host: 'VoidedSMP.aternos.me',
   port: 38491,
   username: 'AFK_Bot',
   reconnectDelay: 5000
-}
+};
 
-let bot = null
+let bot;
 
 function createBot() {
+  console.log("Connecting...");
+
   bot = mineflayer.createBot({
     host: config.host,
     port: config.port,
     username: config.username
-  })
+  });
 
-  bot.on('spawn', () => {
-    console.log('[+] Bot joined server')
+  bot.once('spawn', () => {
+    console.log("[+] Bot joined server!");
 
-    // simple anti-AFK movement
     setInterval(() => {
-      if (!bot || !bot.entity) return
-      bot.setControlState('jump', true)
-      setTimeout(() => bot.setControlState('jump', false), 300)
-    }, 8000)
-  })
+      if (!bot || !bot.entity) return;
 
-  bot.on('kicked', (reason) => {
-    console.log('[!] Kicked:', reason?.toString())
-  })
+      bot.setControlState('jump', true);
+      setTimeout(() => {
+        if (bot) bot.setControlState('jump', false);
+      }, 300);
+    }, 8000);
+  });
 
-  bot.on('error', (err) => {
-    console.log('[!] Error:', err.message)
-  })
+  bot.on('login', () => console.log("[+] Logged in"));
+  bot.on('messagestr', msg => console.log("[CHAT]", msg));
+  bot.on('kicked', reason => console.log("[!] Kicked:", reason));
+  bot.on('error', err => console.log("[!] Error:", err.message));
 
   bot.on('end', () => {
-    console.log('[x] Disconnected. Reconnecting in', config.reconnectDelay / 1000, 's...')
-    setTimeout(createBot, config.reconnectDelay)
-  })
+    console.log(`[x] Disconnected. Reconnecting in ${config.reconnectDelay / 1000}s...`);
+    setTimeout(createBot, config.reconnectDelay);
+  });
 }
 
-// start first connection
-createBot()
+createBot();
